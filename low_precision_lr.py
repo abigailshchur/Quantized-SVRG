@@ -10,22 +10,19 @@ def gradient(wi, xi, sx, sw, yi):
 	dp = np.dot(wi.astype(np.int32), xi.astype(np.int32))
 	return 2.0*(float(dp)*sx*sw - yi)
 
+def gradient_full(wi, xi, yi):
+	return 2.0*xi*(np.dot(wi, xi) - yi)
+
 
 def quantize(vec, s, qtype, vmin, vmax):
 	vec = vec / s
 	vec2 = np.zeros(len(vec), dtype=qtype)
 	for i in range(len(vec)):
-		#print(vec[i])
-		#print(vmax)
-		#print(vmin)
 		if vec[i] > vmax:
-			#print("here1")
 			vec2[i] = qtype(vmax)
 		elif vec[i] < vmin:
-			#print("here2")
 			vec2[i] = qtype(vmin)
 		else:
-			#print("here3")
 			vec2[i] = qtype(vec[i])
 			if np.random.rand() > vec[i]%1 and vec2[i] < vmax:
 				vec2[i]+=1
@@ -77,43 +74,47 @@ def svrg(alpha, x, y, K, T, calc_loss = False):
 	time_array = []
 	loss_array = []
 	n,d = np.shape(x)
-	# weights are blue
-	# w_last = np.array(np.random.rand(d)*500, dtype=np.int16) #initialization
-	w_last = np.array(np.ones(d)*(-32768), dtype=np.int16) #initialization
-	w_last[0] = np.int16(5)
-	sb = 1/(2.0*128.0*128.0); sr = 1/128.0; sg = sb; sp = sg/sr # defining all scales
+	w_last = np.array(np.random.rand(d)*500, dtype=np.int16) #initialization
+	#w_last = np.array(np.ones(d)*(-32768), dtype=np.int16) #initialization
+	#w_last[0] = np.int16(5)
+	sb = 1/((1.0)*(2**15)); sr = 1/128.0; sg = sb; sp = sg/sr # defining all scales
+	max16 = 1.0*((2**15)-1); min16 = -1.0*((2**15))
+	max8 = 1.0*((2**7)-1); min8 = -1.0*((2**7))
 	bb = 16; br = 8; bp = 8; bg = 16
-	# some constants to know the ranges of each color
-	minb, maxb = range_of_lp(sb, bb); minr, maxr = range_of_lp(sr, br)
-	ming, maxg = range_of_lp(sg, bg); minp, maxp = range_of_lp(sp, bp)
 	for k in range(K):
 		w_tilde = w_last
 		mu_tilde = np.zeros(d) # full precision for now
 		for i in range(n):
 			xi = x[i, :]
-			grd = gradient(w_tilde, xi, sr, sb, y[i])*xi.astype(float)*sr
-			mu_tilde += grd
-		mu_tilde = quantize(alpha*mu_tilde/(1.0*n), sg, np.int16, -32768, 32767)
-		w0 = w_tilde
+			grd = gradient(w_tilde, xi, sr, sb, y[i])*(xi.astype(float)*sr)
+			mu_tilde += grd # add full precision gradient
+		mu_tilde = quantize(alpha*mu_tilde/(1.0*n), sg, np.int16, min16, max16)
+		w = w_tilde
 		start = time.time()
+		#count=0
 		for t in range(T):
 			i = random.randint(0,n-1)
 			xi = x[i, :]
 			yi = y[i]
-			grad1 = gradient(w0, xi, sr, sb, yi)
-			grad2 = gradient(w_tilde, xi, sr, sb, yi)
-			temp1 = quantize_n(alpha*(grad1-grad2), sp, np.int8, -128, 127)
+			grad1 = gradient(w, xi, sr, sb, yi) # fp gradient wrt w
+			grad2 = gradient(w_tilde, xi, sr, sb, yi) #fp gradient wrt w_tilde
+			temp1 = quantize_n(alpha*(grad1-grad2), sp, np.int8, min8, max8)
 			temp1 = temp1.astype(np.int16)
-			temp2 = np.dot(temp1, xi)
-			c = temp2 - mu_tilde
-			w0 = w0  + temp2 - mu_tilde
-		w_last = w0
-		print(w_last)
-		print(w_last.astype(float)*sb)
+			x16 = xi.astype(np.int16)
+			temp2 = np.dot(temp1, x16)
+			#if count < 10:
+			#	print("low p:")
+			#	print(temp2)
+			#	print("high p:")
+			#	print(temp2.astype(float)*sg)
+			#	count+=1
+			w = w.astype(float)*sb  + temp2.astype(float)*sg - mu_tilde.astype(float)*sg
+			w = quantize(w, sb, np.int16, min16, max16)
+		w_last = w
 		time_array.append(time.time() - start)
 		if (calc_loss):
-			loss_array.append(loss(w_last.astype(float), x.astype(float), y.astype(float)))
-	return w_last, time_array, loss_array
+			loss_array.append(loss(w_last.astype(float)*sb, x.astype(float)*sr, y.astype(float)))
+	return w_last.astype(float)*sb, time_array, loss_array
 
 
 def range_of_lp(s,b):
