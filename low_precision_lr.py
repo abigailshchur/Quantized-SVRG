@@ -41,23 +41,6 @@ def quantize_n(n, s, qtype, vmin, vmax):
 	return n2
 
 """
-Low precision stochastic gradient descent
-"""
-def sgd(alpha, x, y, iters):
-	n,d = np.shape(x)
-	wi = np.array(np.random.rand(d)*500, dtype=np.int16)
-	sw = 1/(2.0*128.0*128.0)
-	bw = 16
-	minw, maxw = range_of_lp(sw, )
-	for i in range(iters):
-		idx = random.randint(0, n-1)
-		xi = x[idx, :]
-		yi = y[idx]
-		grad = gradient(wi,xi,yi)
-		wi = wi - alpha*(grad)
-	return wi
-
-"""
 Low precision SVRG calculation (16 bit weights)
 @param alpha : learning rate
 @param x : 8 bit matrix
@@ -102,13 +85,7 @@ def svrg(alpha, x, y, K, T, calc_loss = False):
 			temp1 = temp1.astype(np.int16)
 			x16 = xi.astype(np.int16)
 			temp2 = np.dot(temp1, x16)
-			#if count < 10:
-			#	print("low p:")
-			#	print(temp2)
-			#	print("high p:")
-			#	print(temp2.astype(float)*sg)
-			#	count+=1
-			w = w.astype(float)*sb  + temp2.astype(float)*sg - mu_tilde.astype(float)*sg
+			w = w.astype(float)*sb  - temp2.astype(float)*sg - mu_tilde.astype(float)*sg
 			w = quantize(w, sb, np.int16, min16, max16)
 		w_last = w
 		time_array.append(time.time() - start)

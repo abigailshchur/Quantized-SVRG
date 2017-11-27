@@ -32,7 +32,6 @@ def svrg(alpha, x, y, K, T, calc_loss = False):
 	time_array = []
 	loss_array = []
 	n,d = np.shape(x)
-	#w_last = np.random.uniform(low=-1.0, high=127/128.0, size=(d,))
 	w_last = np.ones(d)*(-1)
 	w_last[0] = 5/(2.0*128.0*128.0)
 	for k in range(K):
@@ -42,24 +41,17 @@ def svrg(alpha, x, y, K, T, calc_loss = False):
 		for i in range(n):
 			xi = x[i, :]
 			mu_tilde += gradient(w_tilde, xi, y[i])
-			#if i==0:
-				#print(gradient(w_tilde, xi, y[i]))
 		mu_tilde = mu_tilde/(1.0*n)
-		#print(mu_tilde*alpha)
 		w0 = w_tilde
 		start = time.time()
 		for t in range(T):
 			i = random.randint(0,n-1)
-			#i=5
 			xi = x[i, :]
 			yi = y[i]
 			grad_1 = gradient(w0, xi, yi)
 			grad_2 = gradient(w_tilde, xi, yi)
 			w0 = w0 - alpha*(grad_1 - grad_2 + mu_tilde)
-			#print(w0)
-			#break
 		w_last = w0
-		#print(w_last)
 		time_array.append(time.time() - start)
 		if (calc_loss):
 			loss_array.append(loss(w_last, x, y))
