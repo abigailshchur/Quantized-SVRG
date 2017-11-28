@@ -43,12 +43,13 @@ def quantize_n(n, s, qtype, vmin, vmax):
 def halp(alpha, x, y, T, calc_loss = True):
 	time_array = []
 	loss_array = []
-	mu = 1/3.0 # variance of x sample
+	# mu = 1/3.0 # variance of x sample
+	mu = 3 # variance of x sample
 	n,d = np.shape(x)
 	w_tilde = np.random.rand(d) # full precision
 	z0 = np.array(np.zeros(d), dtype=np.int16)
 	s = 1/((1.0)*(2**15))
-	m = 4*n
+	m = 2*n
 	for t in range(T):
 		w_tilde = w_tilde + z0.astype(float)*s
 		mu_tilde = np.zeros(d)
