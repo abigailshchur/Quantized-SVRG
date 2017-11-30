@@ -146,13 +146,15 @@ class MF():
         """
         time_array = [] 
         
-        b_u_last = np.random.normal(scale=1./self.K, size= self.b_u.size)
+        b_u_last = np.random.normal(scale=1./self.K, size= self.b_u.shape)
         
-        b_i_last = np.random.normal(scale=1./self.K, size= self.b_i.size)
+        b_i_last = np.random.normal(scale=1./self.K, size= self.b_i.shape)
         
-        P_last = np.random.normal(scale=1./self.K, size= self.P.size)
+        P_last = np.random.normal(scale=1./self.K, size= self.P.shape)
         
-        Q_last = np.random.normal(scale=1./self.K, size= self.Q.size)
+        Q_last = np.random.normal(scale=1./self.K, size= self.Q.shape)
+        
+        
         
         for _ in range(O):
             
@@ -181,11 +183,21 @@ class MF():
                 b_u_mu_tilde[i] += e - self.beta * b_u_tilde[i]
         
                 b_i_mu_tilde[j] += e - self.beta * b_i_tilde[j]
-        
+                
+                self.P[i, :] += self.alpha * (e * self.Q[j, :] - self.beta * self.P[i,:])
+                
+                self.Q[j, :] += self.alpha * (e * self.P[i, :] - self.beta * self.Q[j,:])
+                
+                P_tilde[i,:]
+                
+                Q_tilde[j, :]
+                
+                P_mu_tilde[i, :]
+
                 P_mu_tilde[i, :] += e * Q_tilde[j, :] - self.beta * P_tilde[i,:]
         
                 Q_mu_tilde[j, :] += e * P_tilde[i, :] - self.beta * Q_tilde[j,:]
-           
+                
             b_u_mu_tilde = b_u_mu_tilde/self.no_samples
         
             b_i_mu_tilde = b_i_mu_tilde/self.no_samples
@@ -205,27 +217,27 @@ class MF():
             start = time.time()
             
             for _ in range(I):
-                k = random.randint(0,self.no_samples)
+                k = random.randint(0,self.no_samples - 1)
             
                 sample = self.samples[k]
                 
                 i, j, _ = sample
                 
-                b_u_grad1 =   self.alpha * (e - self.beta * self.b_u_0[i])
+                b_u_grad1 =   self.alpha * (e - self.beta * b_u_0[i])
             
-                b_i_grad1 = self.alpha * (e - self.beta * self.b_i_0[j])
+                b_i_grad1 = self.alpha * (e - self.beta * b_i_0[j])
         
-                P_grad1 = self.alpha * (e * self.Q_0[j, :] - self.beta * self.P_0[i,:])
+                P_grad1 = self.alpha * (e * Q_0[j, :] - self.beta * P_0[i,:])
             
-                Q_grad1 = self.alpha * (e * self.P_0[i, :] - self.beta * self.Q_0[j,:])
+                Q_grad1 = self.alpha * (e * P_0[i, :] - self.beta * Q_0[j,:])
     
-                b_u_grad2 =   self.alpha * (e - self.beta * self.b_u_tilde[i])
+                b_u_grad2 =   self.alpha * (e - self.beta * b_u_tilde[i])
             
-                b_i_grad2 = self.alpha * (e - self.beta * self.b_i_tilde[j])
+                b_i_grad2 = self.alpha * (e - self.beta * b_i_tilde[j])
         
-                P_grad2 = self.alpha * (e * self.Q_tilde[j, :] - self.beta * self.P_tilde[i,:])
+                P_grad2 = self.alpha * (e * Q_tilde[j, :] - self.beta * P_tilde[i,:])
             
-                Q_grad2 = self.alpha * (e * self.P_tilde[i, :] - self.beta * self.Q_tilde[j,:])
+                Q_grad2 = self.alpha * (e * P_tilde[i, :] - self.beta * Q_tilde[j,:])
                 
                 b_u_0 = b_u_0 - self.alpha*(b_u_grad1 - b_u_grad2 + b_u_mu_tilde)
                 
