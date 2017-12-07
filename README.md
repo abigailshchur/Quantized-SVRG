@@ -1,1 +1,1 @@
-# Quantized_SVRG
+# Quantized-SVRG
